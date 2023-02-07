@@ -41,21 +41,26 @@ async function run() {
 
     app.get('/availble', async(req, res)=>{
       const date = req.query.date;
+      const query = {};
       //  step1. get all services 
-      const services = await doctorsService.find().toArray();
+      const services = await doctorsService.find(query).toArray();
 
       //  step2. get booking of the day
-      const query = {date: date}
-      const bookings = await bookingService.find(query).toArray();
+      const bookingQuery = {date: date}
+      const bookings = await bookingService.find(bookingQuery).toArray();
       
       // stp 3: for each service , find bookings for that service 
 
 
       services.forEach(service=>{
-        const serviceBookings = bookings.filter(book=>book.treatment === service.name);
-        const booked = serviceBookings.map(slots=>slots.slot);
-        const available = service.slots.filter(slot=>!booked.includes(slot))
-        service.slot = available;
+        // step 4: find bookings for that service. output: [{}, {}, {}, {}]
+        const serviceBookings = bookings.filter(book => book.treatment === service.name);
+        // step 5: select slots for the service Bookings: ['', '', '', '']
+        const bookedSlots = serviceBookings.map(book=>book.slot);
+        // step 6: select those slots that are not in bookedSlots
+        const available = service.slots.filter(slot => !bookedSlots.includes(slot));
+        //step 7: set available to slots to make it easiergit 
+        service.slots = available;
       })
 
       
