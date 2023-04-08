@@ -46,6 +46,7 @@ async function run ()
     const bookingCollections = client.db( "doctorsPortal" ).collection( "bookings" );
     const userCollections = client.db( "doctorsPortal" ).collection( "users" );
     const doctorsCollection = client.db( "doctorsPortal" ).collection( "doctors" );
+    const paymentCollection = client.db( "doctorsPortal" ).collection( "payments" );
 
     const verifyAdmin = async ( req, res, next ) =>
     {
@@ -64,16 +65,18 @@ async function run ()
 
     // payment methods 
 
-    app.post('/create-payment-intent', verifyJWT, async(req, res)=>{
+    app.post('/create-payment-intent', verifyJWT, async(req, res) =>{
       const service = req.body;
       const price = service.price;
       const amount = price*100;
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency : 'usd',
-        payment_method_types: ['card']
+      const paymentIntent = await stripe.PaymentIntents.create({
+        amount : amount,
+        currency: 'usd',
+        payment_method_types:['card']
       });
-      res.send({clientSecret: paymentIntent.client_secret})
+      console.log(paymentIntent);
+      res.send({clientSecret: paymentIntent.client_secret});
+      
     });
 
     app.get( '/service', async ( req, res ) =>
@@ -165,6 +168,21 @@ async function run ()
       const result = await bookingCollections.insertOne( booking );
       return res.send( { success: true, result } );
     } )
+
+    app.patch('/booking/:id', verifyJWT, async(req, res)=>{
+      const id = req.params.id;
+      const payment = req.body;
+      const filter = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set:{
+          paid : true,
+          transactionId: payment.transactionId
+        }
+      }
+      const updateDbooking = await bookingCollections.updateOne(filter, updatedDoc);
+      const result = await paymentCollection.insertOne(payment);
+      res.send(updatedDoc);
+    })
 
     // find available slots 
 
